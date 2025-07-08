@@ -1,23 +1,20 @@
 package org.theryble.emultesting;
 
 import java.awt.AWTException;
-import java.awt.Color;
 import java.awt.MouseInfo;
 import java.awt.Point;
 import java.awt.Robot;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseListener;
-import java.awt.event.MouseMotionListener;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.awt.event.MouseEvent;
+
+import javax.swing.DefaultListModel;
 import javax.swing.JFrame;
+import javax.swing.ListModel;
 import javax.swing.SwingUtilities;
 
 import com.github.kwhat.jnativehook.GlobalScreen;
 import com.github.kwhat.jnativehook.mouse.NativeMouseEvent;
 import com.github.kwhat.jnativehook.mouse.NativeMouseListener;
-import com.github.kwhat.jnativehook.mouse.NativeMouseMotionListener;
 
 /**
  *
@@ -25,6 +22,7 @@ import com.github.kwhat.jnativehook.mouse.NativeMouseMotionListener;
  */
 public class EmulClick extends JFrame implements NativeMouseListener {
 
+    ListModel<String> listPoint = new DefaultListModel<>();
     boolean isAddPoint = false;
     boolean isPlay = false;
     MouseMotionThread threadMouse;
@@ -51,9 +49,11 @@ public class EmulClick extends JFrame implements NativeMouseListener {
 
     @Override
     public void nativeMouseClicked(NativeMouseEvent e) {
-        // Ignore clicks outside the JFrame
-        if (!this.getBounds().contains(e.getX(), e.getY())) {
-            System.out.println("Mouse clicked outside the frame at: " + e.getX() + ", " + e.getY());
+        Point pt = MouseInfo.getPointerInfo().getLocation();
+        if (isAddPoint) {
+            String point = "Point [" + pt.x + " ," + pt.y + "]";
+            ((DefaultListModel<String>) listPoint).addElement(point);
+            jlPoint.setModel(listPoint);
         }
     }
 
@@ -104,17 +104,8 @@ public class EmulClick extends JFrame implements NativeMouseListener {
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setResizable(false);
 
-        jlPoint.setModel(new javax.swing.AbstractListModel<String>() {
-            String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
-
-            public int getSize() {
-                return strings.length;
-            }
-
-            public String getElementAt(int i) {
-                return strings[i];
-            }
-        });
+        listPoint = new DefaultListModel<>();
+        jlPoint.setModel(listPoint);
         jScrollPane1.setViewportView(jlPoint);
 
         jtbAdd.setText("+");
@@ -243,8 +234,8 @@ public class EmulClick extends JFrame implements NativeMouseListener {
 
     private void jtbAddStateChanged(javax.swing.event.ChangeEvent evt) {// GEN-FIRST:event_jtbAddStateChanged
         isAddPoint = jtbAdd.isSelected();
-        if (!isPlay) {
-            addPoint();
+        if (!isAddPoint) {
+            jlPoint.remove(listPoint.getSize() - 1);
         }
     }// GEN-LAST:event_jtbAddStateChanged
 
