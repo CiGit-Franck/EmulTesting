@@ -47,6 +47,11 @@ public class EmulClick extends JFrame implements NativeMouseListener {
         }
     }
 
+    /**
+     * This method is called when the mouse is clicked.
+     * If the "Add Point" toggle button is selected, it adds the current mouse
+     * position to the list of points.
+     */
     @Override
     public void nativeMouseClicked(NativeMouseEvent e) {
         Point pt = MouseInfo.getPointerInfo().getLocation();
@@ -57,20 +62,24 @@ public class EmulClick extends JFrame implements NativeMouseListener {
         }
     }
 
+    /**
+     * This method is called when the mouse is pressed.
+     * Currently, it does not perform any action.
+     * It is left empty as per the original code.
+     */
     @Override
     public void nativeMousePressed(NativeMouseEvent e) {
         // Not used
     }
 
+    /**
+     * This method is called when the mouse is released.
+     * Currently, it does not perform any action.
+     * It is left empty as per the original code.
+     */
     @Override
     public void nativeMouseReleased(NativeMouseEvent e) {
         // Not used
-    }
-
-    private void addPoint() {
-        if (isAddPoint) {
-
-        }
     }
 
     private void play() {
@@ -105,13 +114,14 @@ public class EmulClick extends JFrame implements NativeMouseListener {
         setResizable(false);
 
         listPoint = new DefaultListModel<>();
+        jlPoint.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         jlPoint.setModel(listPoint);
         jScrollPane1.setViewportView(jlPoint);
 
         jtbAdd.setText("+");
         jtbAdd.addChangeListener(new javax.swing.event.ChangeListener() {
             public void stateChanged(javax.swing.event.ChangeEvent evt) {
-                jtbAddStateChanged(evt);
+                isPlay = jtbPlay.isSelected();
             }
         });
 
@@ -143,14 +153,9 @@ public class EmulClick extends JFrame implements NativeMouseListener {
                                 .addGap(0, 7, Short.MAX_VALUE)));
 
         jtbPlay.setText(">");
-        jtbPlay.addChangeListener(new javax.swing.event.ChangeListener() {
-            public void stateChanged(javax.swing.event.ChangeEvent evt) {
-                jtbPlayStateChanged(evt);
-            }
-        });
         jtbPlay.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jtbPlayActionPerformed(evt);
+                isPlay = jtbPlay.isSelected();
             }
         });
 
@@ -176,11 +181,19 @@ public class EmulClick extends JFrame implements NativeMouseListener {
         jbClear.setText("C");
         jbClear.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jbClearActionPerformed(evt);
+                ((DefaultListModel<String>) listPoint).clear();
             }
         });
 
         jbDel.setText("-");
+        jbDel.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                int selectedIndex = jlPoint.getSelectedIndex();
+                if (selectedIndex != -1) {
+                    ((DefaultListModel<String>) listPoint).remove(selectedIndex);
+                }
+            }
+        });
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -224,27 +237,9 @@ public class EmulClick extends JFrame implements NativeMouseListener {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jbClearActionPerformed(java.awt.event.ActionEvent evt) {// GEN-FIRST:event_jbClearActionPerformed
-        // TODO add your handling code here:
-    }// GEN-LAST:event_jbClearActionPerformed
-
     private void jtbPlayActionPerformed(java.awt.event.ActionEvent evt) {// GEN-FIRST:event_jtbPlayActionPerformed
         // TODO add your handling code here:
     }// GEN-LAST:event_jtbPlayActionPerformed
-
-    private void jtbAddStateChanged(javax.swing.event.ChangeEvent evt) {// GEN-FIRST:event_jtbAddStateChanged
-        isAddPoint = jtbAdd.isSelected();
-        if (!isAddPoint) {
-            jlPoint.remove(listPoint.getSize() - 1);
-        }
-    }// GEN-LAST:event_jtbAddStateChanged
-
-    private void jtbPlayStateChanged(javax.swing.event.ChangeEvent evt) {// GEN-FIRST:event_jtbPlayStateChanged
-        isPlay = jtbPlay.isSelected();
-        if (!isAddPoint) {
-            play();
-        }
-    }// GEN-LAST:event_jtbPlayStateChanged
 
     /**
      * @param args the command line arguments
@@ -253,19 +248,23 @@ public class EmulClick extends JFrame implements NativeMouseListener {
         SwingUtilities.invokeLater(() -> new EmulClick());
     }
 
+    /**
+     * Thread to update the mouse position in the label.
+     * This thread runs in the background and updates the label
+     * with the current mouse position every 100 milliseconds.
+     */
     class MouseMotionThread extends Thread {
         @Override
         public void run() {
             try {
-                Robot robot = new Robot();
                 while (true) {
                     Thread.sleep(100);
                     Point pt = MouseInfo.getPointerInfo().getLocation();
-                    // Color pixel = robot.getPixelColor(pt.x, pt.y);
                     jlPosition.setText("Position [" + pt.x + " ," + pt.y + "]");
                 }
-            } catch (AWTException | InterruptedException ex) {
+            } catch (InterruptedException ex) {
                 Logger.getLogger(org.theryble.emultesting.EmulClick.class.getName()).log(Level.SEVERE, null, ex);
+                Thread.currentThread().interrupt();
             }
         }
     }
