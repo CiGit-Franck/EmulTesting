@@ -22,10 +22,11 @@ import com.github.kwhat.jnativehook.mouse.NativeMouseListener;
  */
 public class EmulClick extends JFrame implements NativeMouseListener {
 
-    ListModel<String> listPoint = new DefaultListModel<>();
+    ListModel<String> listPoint;
     boolean isAddPoint = false;
     boolean isPlay = false;
     MouseMotionThread threadMouse;
+    MouseAutomateThread threadMouseAutomate;
 
     /**
      * Creates new form EmulClick
@@ -33,11 +34,14 @@ public class EmulClick extends JFrame implements NativeMouseListener {
     public EmulClick() {
         setLocationRelativeTo(null);
 
+        listPoint = new DefaultListModel<>();
         initComponents();
 
         threadMouse = new MouseMotionThread();
         threadMouse.start();
+        threadMouseAutomate = new MouseAutomateThread();
         setVisible(true);
+
         // Register the global mouse motion listener
         try {
             GlobalScreen.registerNativeHook();
@@ -82,12 +86,6 @@ public class EmulClick extends JFrame implements NativeMouseListener {
         // Not used
     }
 
-    private void play() {
-        if (isPlay) {
-
-        }
-    }
-
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -121,7 +119,7 @@ public class EmulClick extends JFrame implements NativeMouseListener {
         jtbAdd.setText("+");
         jtbAdd.addChangeListener(new javax.swing.event.ChangeListener() {
             public void stateChanged(javax.swing.event.ChangeEvent evt) {
-                isPlay = jtbPlay.isSelected();
+                isAddPoint = jtbAdd.isSelected();
             }
         });
 
@@ -156,8 +154,17 @@ public class EmulClick extends JFrame implements NativeMouseListener {
         jtbPlay.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 isPlay = jtbPlay.isSelected();
+                if (isPlay) {
+                    threadMouseAutomate.startMouse();
+                } else {
+                    // threadMouseAutomate.reset();
+                    threadMouseAutomate.stopMouse();
+                }
             }
         });
+
+        jsDelay.setModel(new javax.swing.SpinnerNumberModel(1, 1, 60, 1));
+        jsDelay.setValue(30);
 
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
@@ -237,10 +244,6 @@ public class EmulClick extends JFrame implements NativeMouseListener {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jtbPlayActionPerformed(java.awt.event.ActionEvent evt) {// GEN-FIRST:event_jtbPlayActionPerformed
-        // TODO add your handling code here:
-    }// GEN-LAST:event_jtbPlayActionPerformed
-
     /**
      * @param args the command line arguments
      */
@@ -265,6 +268,78 @@ public class EmulClick extends JFrame implements NativeMouseListener {
             } catch (InterruptedException ex) {
                 Logger.getLogger(org.theryble.emultesting.EmulClick.class.getName()).log(Level.SEVERE, null, ex);
                 Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    /**
+     * Custom thread class that can be started and stopped.
+     * This thread simulates mouse automation and can be interrupted.
+     * It includes methods to start, stop, and reset the thread.
+     * The thread runs in a loop, printing a message every x seconds until stopped.
+     * It can be interrupted to break out of sleep and stop gracefully.
+     */
+    class MouseAutomateThread extends Thread {
+
+        private volatile boolean running = false;
+        private volatile boolean started = false;
+
+        @Override
+        public void run() {
+            running = true;
+            try {
+                Robot robot = new Robot();
+                int delay = ((Integer) jsDelay.getValue()).intValue() * 1000; // Convert to milliseconds
+                while (running) {
+                    for (int i = 0; i < listPoint.getSize(); i++) {
+                        String iter = listPoint.getElementAt(i);
+                        // Simulate mouse click at the specified point
+                        String[] parts = iter.replace("Point [", "").replace("]", "").split(",");
+                        int x = Integer.parseInt(parts[0].trim());
+                        int y = Integer.parseInt(parts[1].trim());
+                        robot.mouseMove(x, y);
+                        // robot.mousePress(java.awt.event.InputEvent.BUTTON1_DOWN_MASK);
+                        robot.mouseRelease(java.awt.event.InputEvent.BUTTON1_DOWN_MASK);
+
+                        // Optional: Add a delay between clicks
+                        Thread.sleep(1000);
+                    }
+
+                    // Sleep for the specified delay before the next iteration
+                    Thread.sleep(delay);
+                }
+            } catch (InterruptedException | AWTException e) {
+                Thread.currentThread().interrupt();
+            }
+            // System.out.println("Interruptible Thread stopped");
+        }
+
+        // Custom start method with additional control
+        public synchronized void startMouse() {
+            // Prevent multiple starts
+            if (started) {
+                throw new IllegalStateException("Thread already started");
+            }
+
+            started = true;
+            super.start(); // Call the original start method
+        }
+
+        public synchronized void stopMouse() {
+            running = false;
+            // started = false; // Reset started state
+            interrupt(); // Interrupt to break out of sleep
+        }
+
+        // Optional: Method to check if thread is running
+        public boolean isRunning() {
+            return running;
+        }
+
+        // Optional: Method to reset thread state
+        public synchronized void reset() {
+            if (started && !running) {
+                started = false;
             }
         }
     }
