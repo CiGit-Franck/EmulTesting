@@ -123,7 +123,7 @@ public class EmulClick extends JFrame implements NativeMouseListener {
             }
         });
 
-        jLabel1.setText("mn");
+        jLabel1.setText("seconds");
 
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
@@ -157,7 +157,6 @@ public class EmulClick extends JFrame implements NativeMouseListener {
                 if (isPlay) {
                     threadMouseAutomate.startMouse();
                 } else {
-                    // threadMouseAutomate.reset();
                     threadMouseAutomate.stopMouse();
                 }
             }
@@ -316,9 +315,12 @@ public class EmulClick extends JFrame implements NativeMouseListener {
 
         // Custom start method with additional control
         public synchronized void startMouse() {
-            // Prevent multiple starts
+        // If thread is already started, create a new thread
             if (started) {
-                throw new IllegalStateException("Thread already started");
+                // Create a new thread with the same runnable
+                Thread newThread = new Thread(this);
+                newThread.start();
+                return;
             }
 
             started = true;
@@ -327,20 +329,22 @@ public class EmulClick extends JFrame implements NativeMouseListener {
 
         public synchronized void stopMouse() {
             running = false;
-            // started = false; // Reset started state
-            interrupt(); // Interrupt to break out of sleep
+            super.interrupt(); // Interrupt to break out of sleep
         }
 
-        // Optional: Method to check if thread is running
-        public boolean isRunning() {
-            return running;
+        // Method to check if thread is still alive and running
+        public boolean isThreadRunning() {
+            return started && running && isAlive();
         }
 
-        // Optional: Method to reset thread state
-        public synchronized void reset() {
-            if (started && !running) {
-                started = false;
+        // Method to safely reset thread state
+        public synchronized MouseAutomateThread resetThread() {
+            // If thread is not alive, create a new instance
+            if (!isAlive()) {
+                return new MouseAutomateThread();
             }
+            
+            throw new IllegalStateException("Cannot reset a running thread");
         }
     }
 
