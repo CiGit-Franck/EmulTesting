@@ -32,7 +32,6 @@ public class EmulClick extends JFrame implements NativeMouseListener {
      * Creates new form EmulClick
      */
     public EmulClick() {
-        setLocationRelativeTo(null);
 
         listPoint = new DefaultListModel<>();
         initComponents();
@@ -40,7 +39,6 @@ public class EmulClick extends JFrame implements NativeMouseListener {
         threadMouse = new MouseMotionThread();
         threadMouse.start();
         threadMouseAutomate = new MouseAutomateThread();
-        setVisible(true);
 
         // Register the global mouse motion listener
         try {
@@ -108,7 +106,9 @@ public class EmulClick extends JFrame implements NativeMouseListener {
         jbClear = new javax.swing.JButton();
         jbDel = new javax.swing.JButton();
 
+        setTitle("EmulTesting");
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
         setResizable(false);
 
         listPoint = new DefaultListModel<>();
@@ -153,11 +153,13 @@ public class EmulClick extends JFrame implements NativeMouseListener {
         jtbPlay.setText(">");
         jtbPlay.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                isPlay = jtbPlay.isSelected();
-                if (isPlay) {
+                if (jtbPlay.isSelected()) {
+                    threadMouseAutomate = new MouseAutomateThread();
                     threadMouseAutomate.startMouse();
                 } else {
-                    threadMouseAutomate.stopMouse();
+                    if (threadMouseAutomate != null) {
+                        threadMouseAutomate.stopMouse();
+                    }
                 }
             }
         });
@@ -247,7 +249,10 @@ public class EmulClick extends JFrame implements NativeMouseListener {
      * @param args the command line arguments
      */
     public static void main(String args[]) {
-        SwingUtilities.invokeLater(() -> new EmulClick());
+        SwingUtilities.invokeLater(() -> {
+            EmulClick app = new EmulClick();
+            app.setVisible(true);
+        });
     }
 
     /**
@@ -281,70 +286,55 @@ public class EmulClick extends JFrame implements NativeMouseListener {
     class MouseAutomateThread extends Thread {
 
         private volatile boolean running = false;
-        private volatile boolean started = false;
+        private Robot robot;
+
+        public MouseAutomateThread() {
+            try {
+                robot = new Robot();
+            } catch (AWTException e) {
+                Logger.getLogger(EmulClick.class.getName()).log(Level.SEVERE, null, e);
+            }
+        }
 
         @Override
         public void run() {
             running = true;
             try {
-                Robot robot = new Robot();
-                int delay = ((Integer) jsDelay.getValue()).intValue() * 1000; // Convert to milliseconds
                 while (running) {
-                    for (int i = 0; i < listPoint.getSize(); i++) {
+                    int delay = (Integer) jsDelay.getValue() * 1000;
+
+                    for (int i = 0; i < listPoint.getSize() && running; i++) {
                         String iter = listPoint.getElementAt(i);
-                        // Simulate mouse click at the specified point
                         String[] parts = iter.replace("Point [", "").replace("]", "").split(",");
                         int x = Integer.parseInt(parts[0].trim());
                         int y = Integer.parseInt(parts[1].trim());
-                        robot.mouseMove(x, y);
-                        // robot.mousePress(java.awt.event.InputEvent.BUTTON1_DOWN_MASK);
-                        robot.mouseRelease(java.awt.event.InputEvent.BUTTON1_DOWN_MASK);
 
-                        // Optional: Add a delay between clicks
-                        Thread.sleep(1000);
+                        robot.mouseMove(x, y);
+                        robot.mousePress(java.awt.event.InputEvent.BUTTON1_DOWN_MASK);
+                        Thread.sleep(50); // Small delay between press and release
+                        robot.mouseRelease(java.awt.event.InputEvent.BUTTON1_DOWN_MASK);
+                        Thread.sleep(500); // Delay between clicks
                     }
 
-                    // Sleep for the specified delay before the next iteration
-                    Thread.sleep(delay);
+                    if (running) {
+                        Thread.sleep(delay);
+                    }
                 }
-            } catch (InterruptedException | AWTException e) {
-                Thread.currentThread().interrupt();
+            } catch (InterruptedException e) {
+                // Just exit
             }
-            // System.out.println("Interruptible Thread stopped");
         }
 
-        // Custom start method with additional control
         public synchronized void startMouse() {
-        // If thread is already started, create a new thread
-            if (started) {
-                // Create a new thread with the same runnable
-                Thread newThread = new Thread(this);
-                newThread.start();
-                return;
+            if (!running) {
+                running = true;
+                start();
             }
-
-            started = true;
-            super.start(); // Call the original start method
         }
 
         public synchronized void stopMouse() {
             running = false;
-            super.interrupt(); // Interrupt to break out of sleep
-        }
-
-        // Method to check if thread is still alive and running
-        public boolean isThreadRunning() {
-            return started && running && isAlive();
-        }
-
-        // Method to safely reset thread state
-        public synchronized MouseAutomateThread resetThread() {
-            // If thread is not alive, create a new instance
-            if (!isAlive()) {
-                return new MouseAutomateThread();
-            }
-            
-            throw new IllegalStateException("Cannot reset a running thread");
+            interrupt();
         }
     }
 
