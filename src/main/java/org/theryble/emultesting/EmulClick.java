@@ -24,6 +24,7 @@ public class EmulClick extends JFrame implements NativeMouseListener {
 
     private transient ListModel<String> listPoint;
     boolean isAddPoint = false;
+    boolean singlePass = false;
     boolean isPlay = false;
     private transient MouseMotionThread threadMouse;
     private transient MouseAutomateThread threadMouseAutomate;
@@ -121,9 +122,12 @@ public class EmulClick extends JFrame implements NativeMouseListener {
             if (!isAddPoint) {
                 // remove last point if toggle is off
                 int lastIndex = listPoint.getSize() - 1;
-                if (lastIndex > 0) {
+                if (lastIndex >= 0 && singlePass) {
+                    singlePass = false;
                     ((DefaultListModel<String>) listPoint).remove(lastIndex);
                 }
+            } else {
+                singlePass = true;
             }
         });
 
